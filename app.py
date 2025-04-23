@@ -30,9 +30,25 @@ if st.sidebar.button("RESET CAPTIONS", use_container_width=True):
 # Reset session state if a new file is uploaded
 if uploaded_file and uploaded_file != st.session_state.get('last_uploaded_file'):
     st.session_state.current_index = 0
-    st.session_state.captions = {}
     st.session_state.last_uploaded_file = uploaded_file
     st.session_state.early_end = False  # Reset early end flag for new upload
+    # --- pre-load any existing .txt captions from the ZIP ---
+    from zipfile import ZipFile as _ZipFile
+    preloaded = {}
+    with _ZipFile(uploaded_file) as _z:
+        for txt in [f for f in _z.namelist() if f.lower().endswith('.txt')]:
+            base = os.path.splitext(os.path.basename(txt))[0]
+            try:
+                text = _z.read(txt).decode('utf-8')
+            except:
+                continue
+            # find matching image by basename + extension
+            for ext in ('png','jpg','jpeg'):
+                img = f"{base}.{ext}"
+                if img in _z.namelist():
+                    preloaded[img] = text
+                    break
+    st.session_state.captions = preloaded
 
 # present user a form with the image and a text area for the user to fill in
 # after user has filled in, they should press a button "done"
@@ -64,6 +80,12 @@ if uploaded_file:
     # And check if user opts to end early
     if current_index < len(image_files) and not st.session_state.get("early_end", False):
 
+        # on the very first image, notify if we have pre-loaded captions
+        if current_index == 0 and st.session_state.captions:
+            st.info(
+              f"Found {len(st.session_state.captions)} existing caption(s). "
+              "You can edit them or press Save to keep the old text."
+            )
         image_file = image_files[current_index]
         image_data = image_data_dict[image_file]
 
@@ -74,8 +96,15 @@ if uploaded_file:
 
         with col2:
             # Text area for the user to input the caption
-            caption = st.text_area("Caption", height=300, key="caption", label_visibility="collapsed",
-                                  placeholder="use Ctrl/cmd + enter for a new line and remember to use a trigger word")
+            # prefill with any existing caption for this image
+            caption = st.text_area(
+                "Caption",
+                value=st.session_state.captions.get(image_file, ""),
+                height=300,
+                # key=f"caption_{current_index}",
+                label_visibility="collapsed",
+                placeholder="use Ctrl/cmd + enter for a new line and remember to use a trigger word"
+            )
             save_caption = st.button("Save", type="primary", use_container_width=True)
 
             # Add an "End/Save Now" button to allow ending the session early
