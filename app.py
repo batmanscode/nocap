@@ -13,10 +13,14 @@ st.write(
     """
     Write captions for your images and download a zip file you can fine tune Flux models with
 
+    This is a simple tool to help save time when captioning images. The zip file you get at the end will caption files with the same name as the image file i.e. every 1.png will have a 1.txt
+
     Fine tuning guide: [replicate.com/blog/fine-tune-flux-with-faces](https://replicate.com/blog/fine-tune-flux-with-faces)
     """
 )
 st.write("---")
+
+st.sidebar.info("Note: you can upload files where only some images have captions")
 
 # user uploads their folder here
 uploaded_file = st.sidebar.file_uploader("Upload a folder of images", type="zip")
