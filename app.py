@@ -15,12 +15,19 @@ st.write(
 
     This is a simple tool to help save time when captioning images. The zip file you get at the end will caption files with the same name as the image file i.e. every 1.png will have a 1.txt
 
-    Fine tuning guide: [replicate.com/blog/fine-tune-flux-with-faces](https://replicate.com/blog/fine-tune-flux-with-faces)
+    You can even upload files where only some images have captions! In this case you'll have the option to edit or keep those
     """
 )
-st.write("---")
 
-st.sidebar.info("Note: you can upload files where only some images have captions")
+with st.expander("Remember to use a :blue[trigger] word", expanded=False):
+    st.write(
+        """
+        Prefix the caption with a "a photo of {NAME}" or add "in the style of {NAME/CONCEPT}" to the end of the caption
+
+        Fine tuning guide: [replicate.com/blog/fine-tune-flux-with-faces](https://replicate.com/blog/fine-tune-flux-with-faces)
+        """
+    )
+st.write("---")
 
 # user uploads their folder here
 uploaded_file = st.sidebar.file_uploader("Upload a folder of images", type="zip")
@@ -66,7 +73,14 @@ if uploaded_file:
     with ZipFile(uploaded_file) as z:
         # Get a list of image files in the zip
         image_files = [f for f in z.namelist() if f.endswith(('png', 'jpg', 'jpeg'))]
+        # always show total count…
         st.sidebar.info(f"Detected {len(image_files)} images")
+        # …and, if any of those already have captions, show that too
+        existing = st.session_state.get("captions", {})
+        caption_count = sum(1 for img in image_files
+                            if img in existing and existing[img])
+        if caption_count:
+            st.sidebar.info(f"{caption_count} caption(s) present")
 
         # Read all image data into memory
         image_data_dict = {image_file: z.read(image_file) for image_file in image_files}
