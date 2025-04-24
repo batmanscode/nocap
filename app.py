@@ -47,16 +47,22 @@ if uploaded_file and uploaded_file != st.session_state.get('last_uploaded_file')
     from zipfile import ZipFile as _ZipFile
     preloaded = {}
     with _ZipFile(uploaded_file) as _z:
-        for txt in [f for f in _z.namelist() if f.lower().endswith('.txt')]:
+        namelist = _z.namelist()
+        txt_files = [f for f in namelist if f.lower().endswith('.txt')]
+        # collect all image paths (lower‐case extension)
+        image_files_all = [
+          f for f in namelist
+          if os.path.splitext(f)[1].lower() in ('.png','.jpg','.jpeg')
+        ]
+        for txt in txt_files:
             base = os.path.splitext(os.path.basename(txt))[0]
             try:
                 text = _z.read(txt).decode('utf-8')
             except:
                 continue
-            # find matching image by basename + extension
-            for ext in ('png','jpg','jpeg'):
-                img = f"{base}.{ext}"
-                if img in _z.namelist():
+            # match on basename across any subfolder
+            for img in image_files_all:
+                if os.path.splitext(os.path.basename(img))[0] == base:
                     preloaded[img] = text
                     break
     st.session_state.captions = preloaded
